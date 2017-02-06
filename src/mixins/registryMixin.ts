@@ -1,23 +1,23 @@
 import WeakMap from '@dojo/shim/WeakMap';
 import { includes } from '@dojo/shim/array';
-import { PropertiesChangeEvent, PropertyChangeRecord } from './../interfaces';
+import { PropertiesChangeEvent, PropertyChangeRecord, WidgetProperties } from './../interfaces';
 import { Evented } from '@dojo/interfaces/bases';
-import createEvented from '@dojo/compose/bases/createEvented';
-import { ComposeFactory } from '@dojo/compose/compose';
+import eventedMixin from '@dojo/compose/bases/eventedMixin';
+import compose from '@dojo/compose/compose';
 import FactoryRegistry from '../FactoryRegistry';
+import createWidget from '../createWidgetBase';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+import { Destroyable } from '@dojo/interfaces/bases';
+import { WidgetMixin, WidgetOverloads } from '../interfaces';
+/* tslint:enable */
 
 /**
  * Properties required for the RegistryMixin
  */
-export interface RegistryMixinProperties {
-	registry: FactoryRegistry;
-}
-
-/**
- * RegistryMixin Options
- */
-export interface RegistryMixinOptions {
-	properties: RegistryMixinProperties;
+export interface RegistryMixinProperties extends WidgetProperties {
+	// TODO - Had to make this optional, seems like it should be anyways
+	registry?: FactoryRegistry;
 }
 
 /**
@@ -28,23 +28,17 @@ export interface RegistryMixin extends Evented {
 }
 
 /**
- * Compose RegistryFactory interface
- */
-export interface RegistryFactory extends ComposeFactory<RegistryMixin, RegistryMixinOptions> {}
-
-/**
  * Registry
  */
 export interface Registry extends RegistryMixin {
-	readonly registry: FactoryRegistry;
+	readonly registry?: FactoryRegistry;
 	readonly properties: RegistryMixinProperties;
 }
 
 const internalRegistryMap = new WeakMap<Registry, FactoryRegistry>();
 
-const registryFactory: RegistryFactory = createEvented.mixin({
-	className: 'RegistryMixin',
-	mixin: {
+const registryMixin = compose.createMixin(createWidget)
+	.extend('RegistryMixin', {
 		diffPropertyRegistry(this: Registry, previousValue: FactoryRegistry, value: FactoryRegistry): PropertyChangeRecord {
 			return {
 				changed: previousValue !== value,
@@ -54,8 +48,9 @@ const registryFactory: RegistryFactory = createEvented.mixin({
 		get registry(this: Registry): FactoryRegistry {
 			return internalRegistryMap.get(this);
 		}
-	},
-	initialize(instance: Registry, options: RegistryMixinOptions) {
+	})
+	.mixin(eventedMixin)
+	.init((instance) => {
 		instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<RegistryMixin, RegistryMixinProperties>) => {
 			if (includes(evt.changedPropertyKeys, 'registry')) {
 				internalRegistryMap.set(instance, evt.properties.registry);
@@ -65,7 +60,6 @@ const registryFactory: RegistryFactory = createEvented.mixin({
 		if (registry) {
 			internalRegistryMap.set(instance, registry);
 		}
-	}
-});
+	});
 
-export default registryFactory;
+export default registryMixin;

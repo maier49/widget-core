@@ -169,7 +169,7 @@ function getFormFieldA11yAttributes(instance: FormLabel) {
  */
 export interface FormLabelMixinFactory extends ComposeFactory<FormLabelMixin, {}> {}
 
-const createFormLabelMixin = compose<FormLabelMixin, {}>({})
+const createFormLabelMixin: FormLabelMixinFactory = compose<FormLabelMixin, {}>({})
 .aspect({
 	after: {
 		render(this: FormLabel, result: DNode): DNode {

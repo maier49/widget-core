@@ -208,7 +208,9 @@ registerSuite({
 								store: newStore,
 								id: '1'
 							};
-							storeMixin.properties = updatedProperties;
+							// TODO - This no longer compiles without the cast to any because properties is read only
+							// That seems correct
+							(<any> storeMixin).properties = updatedProperties;
 							storeMixin.emit({
 								type: 'properties:changed',
 								target: storeMixin,
@@ -252,7 +254,9 @@ registerSuite({
 								store,
 								id: '2'
 							};
-							storeMixin.properties = updatedProperties;
+							// TODO - This no longer compiles without the cast to any because properties is read only
+							// That seems correct
+							(<any> storeMixin).properties = updatedProperties;
 							storeMixin.emit({
 								type: 'properties:changed',
 								target: storeMixin,

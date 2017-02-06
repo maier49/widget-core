@@ -1,10 +1,14 @@
 import WeakMap from '@dojo/shim/WeakMap';
 import { includes } from '@dojo/shim/array';
-import { PropertiesChangeEvent } from './../interfaces';
+import { PropertiesChangeEvent, WidgetProperties, WidgetOptions, WidgetMixin } from './../interfaces';
 import { Evented } from '@dojo/interfaces/bases';
-import createEvented from '@dojo/compose/bases/createEvented';
-import { ComposeFactory } from '@dojo/compose/compose';
+import eventedMixin from '@dojo/compose/bases/eventedMixin';
+import compose from '@dojo/compose/compose';
 import { assign } from '@dojo/core/lang';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+import { Destroyable } from '@dojo/interfaces/bases';
+/* tslint:enable */
 
 /**
  * A representation of the css class names to be applied and
@@ -77,11 +81,6 @@ export interface Themeable extends ThemeableMixin {
 	baseClasses: {};
 	properties: ThemeableProperties;
 }
-
-/**
- * Compose Themeable Factory interface
- */
-export interface ThemeableFactory extends ComposeFactory<ThemeableMixin, ThemeableOptions> {}
 
 type BaseClasses = { [key: string]: string; };
 
@@ -179,8 +178,11 @@ function splitClassStrings(classes: string[]): string[] {
 /**
  * Themeable Factory
  */
-const themeableFactory: ThemeableFactory = createEvented.mixin({
-	mixin: {
+const themeableMixin = compose.createMixin<
+		WidgetMixin<WidgetProperties> & { baseClasses: {} }, WidgetOptions<WidgetProperties>, {}
+	>()
+	.mixin(eventedMixin)
+	.extend({
 		classes(this: Themeable, ...classNames: string[]) {
 			const cssModuleClassNames = generatedClassNameMap.get(this);
 			const baseClassesReverseLookup = baseClassesReverseLookupMap.get(this);
@@ -214,14 +216,13 @@ const themeableFactory: ThemeableFactory = createEvented.mixin({
 
 			return classesResponseChain;
 		}
-	},
-	initialize(instance: Themeable) {
+	})
+	.init((instance) => {
 		instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<ThemeableMixin, ThemeableProperties>) => {
 			onPropertiesChanged(instance, evt.properties, evt.changedPropertyKeys);
 		}));
 		onPropertiesChanged(instance, instance.properties, [ 'theme' ]);
 		baseClassesReverseLookupMap.set(instance, createBaseClassesLookup(instance.baseClasses));
-	}
-});
+	});
 
-export default themeableFactory;
+export default themeableMixin;

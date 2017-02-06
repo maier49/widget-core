@@ -6,8 +6,14 @@ import Observable from '@dojo/core/Observable';
 import { assign } from '@dojo/core/lang';
 import { PropertiesChangeEvent } from './../interfaces';
 import { State, StatefulMixin } from '@dojo/interfaces/bases';
-import createEvented from '@dojo/compose/bases/createEvented';
-import { ComposeFactory } from '@dojo/compose/compose';
+import eventedMixin from '@dojo/compose/bases/eventedMixin';
+import compose from '@dojo/compose/compose';
+import createWidget from '../createWidgetBase';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+import { Destroyable, Evented } from '@dojo/interfaces/bases';
+import { WidgetMixin, WidgetOverloads, WidgetProperties } from '../interfaces';
+/* tslint:enable */
 
 export type ExtendedObservablePatchableStore<S extends State> = ObservablePatchableStore<S> & {
 	/**
@@ -25,14 +31,8 @@ export type ExtendedObservablePatchableStore<S extends State> = ObservablePatcha
  */
 export interface StoreMixinProperties {
 	id?: string;
-	store: ExtendedObservablePatchableStore<State>;
-}
-
-/**
- * Store Mixin Options
- */
-export interface StoreMixinOptions {
-	properties: StoreMixinProperties;
+	// TODO - had to make this optional, seems like it should be anyways
+	store?: ExtendedObservablePatchableStore<State>;
 }
 
 /**
@@ -50,13 +50,7 @@ export interface StoreMixinApi extends StatefulMixin<State> {
  */
 export interface StoreMixin extends StoreMixinApi {
 	readonly properties: StoreMixinProperties;
-	invalidate(): void;
 }
-
-/**
- * Compose Store Mixin Factory interface
- */
-export interface StoreMixinFactory extends ComposeFactory<StoreMixinApi, StoreMixinOptions> {}
 
 /**
  * internal state for the `StoreMixin`
@@ -102,9 +96,9 @@ function onPropertiesChanged(instance: StoreMixin, properties: StoreMixinPropert
 /**
  * Store Mixin Factory
  */
-const storeMixinFactory: StoreMixinFactory = createEvented.mixin({
-	className: 'StoreMixin',
-	mixin: {
+const storeMixin = compose.createMixin(createWidget)
+	.mixin(eventedMixin)
+	.extend('StoreMixin', {
 		get state(this: StoreMixin) {
 			return stateMap.get(this).state;
 		},
@@ -143,6 +137,9 @@ const storeMixinFactory: StoreMixinFactory = createEvented.mixin({
 		},
 		setState(this: StoreMixin, newState: Partial<State>): void {
 			const { properties: { store, id } } = this;
+			if (!store) {
+				throw new Error('store is required to set state');
+			}
 
 			if (id || newState['id']) {
 				store.patch(assign( { id }, newState))
@@ -156,8 +153,8 @@ const storeMixinFactory: StoreMixinFactory = createEvented.mixin({
 			}
 
 		}
-	},
-	initialize(instance: StoreMixin) {
+	})
+	.init((instance) => {
 		instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<StoreMixin, StoreMixinProperties>) => {
 			onPropertiesChanged(instance, evt.properties, evt.changedPropertyKeys);
 		}));
@@ -166,7 +163,6 @@ const storeMixinFactory: StoreMixinFactory = createEvented.mixin({
 		}));
 		stateMap.set(instance, { state: Object.create(null) });
 		instance.observe();
-	}
-});
+	});
 
-export default storeMixinFactory;
+export default storeMixin;

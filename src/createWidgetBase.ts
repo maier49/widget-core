@@ -1,5 +1,5 @@
-import { isComposeFactory } from '@dojo/compose/compose';
-import createEvented from '@dojo/compose/bases/createEvented';
+import compose, { isComposeFactory } from '@dojo/compose/compose';
+import eventedMixin from '@dojo/compose/bases/eventedMixin';
 import {
 	DNode,
 	PropertiesChangeEvent,
@@ -167,148 +167,146 @@ function bindFunctionProperties(instance: Widget<WidgetProperties>, properties: 
 	});
 }
 
-const createWidget: WidgetBaseFactory = createEvented
-	.mixin<WidgetMixin<WidgetProperties>, WidgetOptions<WidgetProperties>>({
-		mixin: {
-			get properties(this: Widget<WidgetProperties>): WidgetProperties {
-				const { properties } = widgetInternalStateMap.get(this);
-				return properties;
-			},
-
-			getNode(this: Widget<WidgetProperties>): DNode {
-				return v('div', {}, this.getChildrenNodes());
-			},
-
-			get children(this: Widget<WidgetProperties>) {
-				return widgetInternalStateMap.get(this).children;
-			},
-
-			setChildren(this: Widget<WidgetProperties>, children: DNode[]): void {
-				const internalState = widgetInternalStateMap.get(this);
-				internalState.children = children;
-				this.emit({
-					type: 'widget:children',
-					target: this
-				});
-			},
-
-			getChildrenNodes(this: Widget<WidgetProperties>): DNode[] {
-				return this.children;
-			},
-
-			invalidate(this: Widget<WidgetProperties>): void {
-				const internalState = widgetInternalStateMap.get(this);
-				internalState.dirty = true;
-				this.emit({
-					type: 'invalidated',
-					target: this
-				});
-			},
-
-			get id(this: Widget<WidgetProperties>): string | undefined {
-				return this.properties.id;
-			},
-
-			setProperties(this: Widget<WidgetProperties>, properties: WidgetProperties) {
-				const internalState = widgetInternalStateMap.get(this);
-
-				const diffPropertyResults: { [index: string]: PropertyChangeRecord } = {};
-				const diffPropertyChangedKeys: string[] = [];
-
-				bindFunctionProperties(this, properties);
-
-				internalState.diffPropertyFunctionMap.forEach((property: string, diffFunctionName: string) => {
-					const previousProperty = internalState.previousProperties[property];
-					const newProperty = properties[property];
-					const result: PropertyChangeRecord = this[diffFunctionName](previousProperty, newProperty);
-
-					if (!result) {
-						return;
-					}
-
-					if (result.changed) {
-						diffPropertyChangedKeys.push(property);
-					}
-					delete properties[property];
-					delete internalState.previousProperties[property];
-					diffPropertyResults[property] = result.value;
-				});
-
-				const diffPropertiesResult = this.diffProperties(internalState.previousProperties, properties);
-				internalState.properties = assign(diffPropertiesResult.properties, diffPropertyResults);
-
-				const changedPropertyKeys = [...diffPropertiesResult.changedKeys, ...diffPropertyChangedKeys];
-
-				if (changedPropertyKeys.length) {
-					this.emit({
-						type: 'properties:changed',
-						target: this,
-						properties: this.properties,
-						changedPropertyKeys
-					});
-				}
-				internalState.previousProperties = this.properties;
-			},
-
-			diffProperties(this: Widget<WidgetProperties>, previousProperties: WidgetProperties, newProperties: WidgetProperties): PropertiesChangeRecord<WidgetProperties> {
-				const changedKeys = Object.keys(newProperties).reduce((changedPropertyKeys: string[], propertyKey: string): string[] => {
-					if (previousProperties[propertyKey] !== newProperties[propertyKey]) {
-						changedPropertyKeys.push(propertyKey);
-					}
-					return changedPropertyKeys;
-				}, []);
-
-				return { changedKeys, properties: assign({}, newProperties) };
-			},
-
-			render(this: Widget<WidgetProperties>): DNode {
-				return this.getNode();
-			},
-
-			__render__(this: Widget<WidgetProperties>): VNode | string | null {
-				const internalState = widgetInternalStateMap.get(this);
-				if (internalState.dirty || !internalState.cachedVNode) {
-					const widget = dNodeToVNode(this, this.render());
-					manageDetachedChildren(this);
-					if (widget) {
-						internalState.cachedVNode = widget;
-					}
-					internalState.dirty = false;
-					return widget;
-				}
-				return internalState.cachedVNode;
-			},
-
-			registry: undefined
+const createWidget: WidgetBaseFactory = compose<WidgetMixin<WidgetProperties>, WidgetOptions<WidgetProperties>>({
+		get properties(this: Widget<WidgetProperties>): WidgetProperties {
+			const { properties } = widgetInternalStateMap.get(this);
+			return properties;
 		},
-		initialize(instance: Widget<WidgetProperties>, options: WidgetOptions<WidgetProperties> = {}) {
-			const { properties = {} } = options;
-			const diffPropertyFunctionMap = new Map<string, string>();
 
-			Object.keys(Object.getPrototypeOf(instance)).forEach((attribute) => {
-				const match = attribute.match(propertyFunctionNameRegex);
-				if (match) {
-					diffPropertyFunctionMap.set(match[0], `${match[1].slice(0, 1).toLowerCase()}${match[1].slice(1)}`);
+		getNode(this: Widget<WidgetProperties>): DNode {
+			return v('div', {}, this.getChildrenNodes());
+		},
+
+		get children(this: Widget<WidgetProperties>) {
+			return widgetInternalStateMap.get(this).children;
+		},
+
+		setChildren(this: Widget<WidgetProperties>, children: DNode[]): void {
+			const internalState = widgetInternalStateMap.get(this);
+			internalState.children = children;
+			this.emit({
+				type: 'widget:children',
+				target: this
+			});
+		},
+
+		getChildrenNodes(this: Widget<WidgetProperties>): DNode[] {
+			return this.children;
+		},
+
+		invalidate(this: Widget<WidgetProperties>): void {
+			const internalState = widgetInternalStateMap.get(this);
+			internalState.dirty = true;
+			this.emit({
+				type: 'invalidated',
+				target: this
+			});
+		},
+
+		get id(this: Widget<WidgetProperties>): string | undefined {
+			return this.properties.id;
+		},
+
+		setProperties(this: Widget<WidgetProperties>, properties: WidgetProperties) {
+			const internalState = widgetInternalStateMap.get(this);
+
+			const diffPropertyResults: { [index: string]: PropertyChangeRecord } = {};
+			const diffPropertyChangedKeys: string[] = [];
+
+			bindFunctionProperties(this, properties);
+
+			internalState.diffPropertyFunctionMap.forEach((property: string, diffFunctionName: string) => {
+				const previousProperty = internalState.previousProperties[property];
+				const newProperty = properties[property];
+				const result: PropertyChangeRecord = this[diffFunctionName](previousProperty, newProperty);
+
+				if (!result) {
+					return;
 				}
+
+				if (result.changed) {
+					diffPropertyChangedKeys.push(property);
+				}
+				delete properties[property];
+				delete internalState.previousProperties[property];
+				diffPropertyResults[property] = result.value;
 			});
 
-			widgetInternalStateMap.set(instance, {
-				dirty: true,
-				widgetClasses: [],
-				properties: {},
-				previousProperties: {},
-				initializedFactoryMap: new Map<string, Promise<WidgetBaseFactory>>(),
-				cachedChildrenMap: new Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, WidgetCacheWrapper[]>(),
-				diffPropertyFunctionMap,
-				children: []
-			});
+			const diffPropertiesResult = this.diffProperties(internalState.previousProperties, properties);
+			internalState.properties = assign(diffPropertiesResult.properties, diffPropertyResults);
 
-			instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<Widget<WidgetProperties>, WidgetProperties>) => {
-				instance.invalidate();
-			}));
+			const changedPropertyKeys = [...diffPropertiesResult.changedKeys, ...diffPropertyChangedKeys];
 
-			instance.setProperties(properties);
-		}
+			if (changedPropertyKeys.length) {
+				this.emit({
+					type: 'properties:changed',
+					target: this,
+					properties: this.properties,
+					changedPropertyKeys
+				});
+			}
+			internalState.previousProperties = this.properties;
+		},
+
+		diffProperties(this: Widget<WidgetProperties>, previousProperties: WidgetProperties, newProperties: WidgetProperties): PropertiesChangeRecord<WidgetProperties> {
+			const changedKeys = Object.keys(newProperties).reduce((changedPropertyKeys: string[], propertyKey: string): string[] => {
+				if (previousProperties[propertyKey] !== newProperties[propertyKey]) {
+					changedPropertyKeys.push(propertyKey);
+				}
+				return changedPropertyKeys;
+			}, []);
+
+			return { changedKeys, properties: assign({}, newProperties) };
+		},
+
+		render(this: Widget<WidgetProperties>): DNode {
+			return this.getNode();
+		},
+
+		__render__(this: Widget<WidgetProperties>): VNode | string | null {
+			const internalState = widgetInternalStateMap.get(this);
+			if (internalState.dirty || !internalState.cachedVNode) {
+				const widget = dNodeToVNode(this, this.render());
+				manageDetachedChildren(this);
+				if (widget) {
+					internalState.cachedVNode = widget;
+				}
+				internalState.dirty = false;
+				return widget;
+			}
+			return internalState.cachedVNode;
+		},
+
+		registry: undefined
+	})
+	.mixin(eventedMixin)
+	.init((instance: Widget<WidgetProperties>, options: WidgetOptions<WidgetProperties> = {}) => {
+		const { properties = {} } = options;
+		const diffPropertyFunctionMap = new Map<string, string>();
+
+		Object.keys(Object.getPrototypeOf(instance)).forEach((attribute) => {
+			const match = attribute.match(propertyFunctionNameRegex);
+			if (match) {
+				diffPropertyFunctionMap.set(match[0], `${match[1].slice(0, 1).toLowerCase()}${match[1].slice(1)}`);
+			}
+		});
+
+		widgetInternalStateMap.set(instance, {
+			dirty: true,
+			widgetClasses: [],
+			properties: {},
+			previousProperties: {},
+			initializedFactoryMap: new Map<string, Promise<WidgetBaseFactory>>(),
+			cachedChildrenMap: new Map<string | Promise<WidgetBaseFactory> | WidgetBaseFactory, WidgetCacheWrapper[]>(),
+			diffPropertyFunctionMap,
+			children: []
+		});
+
+		instance.own(instance.on('properties:changed', (evt: PropertiesChangeEvent<Widget<WidgetProperties>, WidgetProperties>) => {
+			instance.invalidate();
+		}));
+
+		instance.setProperties(properties);
 	});
 
 export default createWidget;

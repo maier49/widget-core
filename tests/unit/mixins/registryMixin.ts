@@ -48,7 +48,7 @@ registerSuite({
 			});
 			assert.equal(instance.registry, newRegistry);
 		},
-		'different property passed on property change should not affect registy'() {
+		'different property passed on property change should not affect registry'() {
 			const registry = new FactoryRegistry();
 			const instance = createRegistryWithProperties({
 				properties: { registry }
