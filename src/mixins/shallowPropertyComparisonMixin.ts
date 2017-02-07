@@ -1,6 +1,10 @@
 import { entries } from '@dojo/shim/object';
-import { WidgetProperties, PropertyComparison, PropertiesChangeRecord } from './../interfaces';
+import { WidgetProperties, PropertiesChangeRecord } from './../interfaces';
 import { deepAssign } from '@dojo/core/lang';
+import compose from '@dojo/compose/compose';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+/* tslint:enable */
 
 /**
  * Determine if the value is an Object
@@ -26,8 +30,8 @@ function shallowCompare(from: any, to: any) {
  * For Arrays, each `item` is compared with the `item` in the equivalent `index` of the `previousProperties` attribute.
  * If the `item` is an `object` then the object comparison described above is applied otherwise a simple `===` is used.
  */
-const shallowPropertyComparisonMixin: { mixin: PropertyComparison<WidgetProperties> } = {
-	mixin: {
+const shallowPropertyComparisonMixin = compose.createMixin()
+	.extend({
 		diffProperties<S>(this: S, previousProperties: WidgetProperties, newProperties: WidgetProperties): PropertiesChangeRecord<WidgetProperties> {
 			const changedKeys: string[] = [];
 
@@ -69,7 +73,6 @@ const shallowPropertyComparisonMixin: { mixin: PropertyComparison<WidgetProperti
 				properties: deepAssign({}, newProperties)
 			};
 		}
-	}
-};
+	});
 
 export default shallowPropertyComparisonMixin;

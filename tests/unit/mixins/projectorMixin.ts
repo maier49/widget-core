@@ -2,7 +2,7 @@ import global from '@dojo/core/global';
 import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import { spy } from 'sinon';
-import createProjectorMixin, { ProjectorState } from '../../../src/mixins/createProjectorMixin';
+import createProjectorMixin, { ProjectorState } from '../../../src/mixins/projectorMixin';
 import createWidgetBase from '../../../src/createWidgetBase';
 import { v } from '../../../src/d';
 

@@ -38,44 +38,42 @@ function handleDomInsertion(instance: Widget<DomWrapperProperties>, newNode: Nod
 	}
 }
 
-const createDomWrapper: DomWrapperFactory = createWidget.mixin({
-	mixin: {
+const createDomWrapper: DomWrapperFactory = createWidget.extend({
 		afterCreate(this: Widget<DomWrapperProperties>) {
 			handleDomInsertion(this, this.properties.domNode);
 		},
 		afterUpdate(this: Widget<DomWrapperProperties>) {
 			handleDomInsertion(this, this.properties.domNode);
 		}
-	}
-}).aspect({
-	after: {
-		render(this: Widget<DomWrapperProperties>, dNode: DNode) {
-			if (isHNode(dNode)) {
-				const { afterCreate, afterUpdate } = this;
+	}).aspect({
+		after: {
+			render(this: Widget<DomWrapperProperties>, dNode: DNode) {
+				if (isHNode(dNode)) {
+					const { afterCreate, afterUpdate } = this;
 
-				assign(dNode.properties, {
-					afterCreate,
-					afterUpdate
-				});
-			}
-
-			return dNode;
-		},
-		__render__(this: Widget<DomWrapperProperties>, vNode: VNode) {
-			if (vNode && typeof vNode !== 'string') {
-				if (!domWrapperData.has(this)) {
-					domWrapperData.set(this, {
-						vNode: vNode
+					assign(dNode.properties, {
+						afterCreate,
+						afterUpdate
 					});
 				}
-			}
-			else {
-				domWrapperData.delete(this);
-			}
 
-			return vNode;
+				return dNode;
+			},
+			__render__(this: Widget<DomWrapperProperties>, vNode: VNode) {
+				if (vNode && typeof vNode !== 'string') {
+					if (!domWrapperData.has(this)) {
+						domWrapperData.set(this, {
+							vNode: vNode
+						});
+					}
+				}
+				else {
+					domWrapperData.delete(this);
+				}
+
+				return vNode;
+			}
 		}
-	}
-});
+	});
 
 export default createDomWrapper;

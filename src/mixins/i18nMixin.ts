@@ -1,10 +1,14 @@
-/* tslint:disable:interface-name */
-import compose, { ComposeFactory } from '@dojo/compose/compose';
+import compose from '@dojo/compose/compose';
 import { assign } from '@dojo/core/lang';
 import i18n, { Bundle, formatMessage, getCachedMessages, Messages, observeLocale } from '@dojo/i18n/i18n';
 import { VNodeProperties } from 'maquette';
-import { DNode, Widget, WidgetOptions, WidgetProperties } from '../interfaces';
+import { DNode, Widget, WidgetProperties, WidgetMixin } from '../interfaces';
 import { isHNode } from '../d';
+/* tslint:disable */
+import { ComposeFactory, ComposeCreatedMixin } from '@dojo/compose/compose';
+import { WidgetOptions } from '../interfaces';
+/* tslint:enable */
+/* tslint:disable:interface-name */
 
 export interface I18nMixin<M extends Messages> {
 	/**
@@ -20,8 +24,6 @@ export interface I18nMixin<M extends Messages> {
 	 */
 	localizeBundle(bundle: Bundle<M>): LocalizedMessages<M>;
 }
-
-export interface I18nFactory extends ComposeFactory<I18nMixin<Messages>, WidgetOptions<I18nProperties>> {}
 
 export interface I18nProperties extends WidgetProperties {
 	/**
@@ -94,52 +96,54 @@ function getLocaleMessages(instance: I18nWidget<Messages, I18nProperties>, bundl
 	});
 }
 
-const createI18nMixin: I18nFactory = compose<I18nMixin<Messages>, WidgetOptions<I18nProperties>>({
-	localizeBundle(this: I18nWidget<Messages, I18nProperties>, bundle: Bundle<Messages>): LocalizedMessages<Messages> {
-		const { locale } = this.properties;
-		const messages = getLocaleMessages(this, bundle) || bundle.messages;
+const i18nMixin = compose.createMixin<WidgetMixin<WidgetProperties & I18nProperties>, {}, {}>()
+	.extend({
+		localizeBundle(this: I18nWidget<Messages, I18nProperties>, bundle: Bundle<Messages>): LocalizedMessages<Messages> {
+			const { locale } = this.properties;
+			const messages = getLocaleMessages(this, bundle) || bundle.messages;
 
-		return assign(Object.create({
-			format(key: string, options?: any) {
-				return formatMessage(bundle.bundlePath, key, options, locale);
+			return assign(Object.create({
+				format(key: string, options?: any) {
+					return formatMessage(bundle.bundlePath, key, options, locale);
+				}
+			}), messages);
+		}
+	})
+	.init((instance: I18nWidget<Messages, I18nProperties>) => {
+		const subscription = observeLocale({
+			next() {
+				if (!instance.properties.locale) {
+					instance.invalidate();
+				}
 			}
-		}), messages);
-	}
-}, (instance: I18nWidget<Messages, I18nProperties>) => {
-	const subscription = observeLocale({
-		next() {
-			if (!instance.properties.locale) {
-				instance.invalidate();
+		});
+		instance.own({
+			destroy() {
+				subscription.unsubscribe();
+			}
+		});
+	}).aspect({
+		after: {
+			render(this: I18nWidget<Messages, I18nProperties>, result: DNode): DNode {
+				if (isHNode(result)) {
+					const { locale, rtl } = this.properties;
+					const vNodeProperties: I18nVNodeProperties = {
+						'data-locale': null,
+						dir: null
+					};
+
+					if (typeof rtl === 'boolean') {
+						vNodeProperties['dir'] = rtl ? 'rtl' : 'ltr';
+					}
+					if (locale) {
+						vNodeProperties['data-locale'] = locale;
+					}
+
+					assign(result.properties, vNodeProperties);
+				}
+				return result;
 			}
 		}
 	});
-	instance.own({
-		destroy() {
-			subscription.unsubscribe();
-		}
-	});
-}).aspect({
-	after: {
-		render(this: I18nWidget<Messages, I18nProperties>, result: DNode): DNode {
-			if (isHNode(result)) {
-				const { locale, rtl } = this.properties;
-				const vNodeProperties: I18nVNodeProperties = {
-					'data-locale': null,
-					dir: null
-				};
 
-				if (typeof rtl === 'boolean') {
-					vNodeProperties['dir'] = rtl ? 'rtl' : 'ltr';
-				}
-				if (locale) {
-					vNodeProperties['data-locale'] = locale;
-				}
-
-				assign(result.properties, vNodeProperties);
-			}
-			return result;
-		}
-	}
-});
-
-export default createI18nMixin;
+export default i18nMixin;

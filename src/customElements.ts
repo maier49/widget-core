@@ -1,9 +1,9 @@
 import { w } from './d';
 import { WidgetProperties, WidgetFactory, Widget, DNode } from './interfaces';
-import createProjectorMixin from './mixins/createProjectorMixin';
+import projectorMixin from './mixins/projectorMixin';
 import createDomWrapper from './util/createDomWrapper';
 import { assign } from '@dojo/core/lang';
-import { Projector } from './mixins/createProjectorMixin';
+import { Projector } from './mixins/projectorMixin';
 import { from as arrayFrom } from '@dojo/shim/array';
 import global from '@dojo/core/global';
 
@@ -239,7 +239,7 @@ export function initializeElement(element: CustomElement) {
 		element.removeChild(childNode);
 	});
 
-	const widgetInstance: Projector = element.getWidgetFactory().mixin(createProjectorMixin)({
+	const widgetInstance: Projector = element.getWidgetFactory().mixin(projectorMixin)({
 		root: element,
 		properties: initialProperties
 	});

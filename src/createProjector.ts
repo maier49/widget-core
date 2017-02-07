@@ -1,6 +1,6 @@
 import { ComposeFactory } from '@dojo/compose/compose';
 import createWidgetBase from './createWidgetBase';
-import createProjectorMixin, { Projector, ProjectorOptions } from './mixins/createProjectorMixin';
+import projectorMixin, { Projector, ProjectorOptions } from './mixins/projectorMixin';
 
 export interface ProjectorFactory extends ComposeFactory<Projector, ProjectorOptions> { }
 
@@ -8,8 +8,8 @@ export interface ProjectorFactory extends ComposeFactory<Projector, ProjectorOpt
  * Projector Factory
  */
 const createProjector: ProjectorFactory = createWidgetBase
-	.mixin(createProjectorMixin);
+	.mixin(projectorMixin);
 
 export default createProjector;
 
-export * from './mixins/createProjectorMixin';
+export * from './mixins/projectorMixin';

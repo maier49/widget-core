@@ -2,17 +2,17 @@ import * as registerSuite from 'intern!object';
 import * as assert from 'intern/chai!assert';
 import i18n, { invalidate, switchLocale, systemLocale } from '@dojo/i18n/i18n';
 import * as sinon from 'sinon';
-import createI18nMixin, { I18nWidget, I18nProperties } from '../../../src/mixins/createI18nMixin';
+import i18nMixin, { I18nWidget, I18nProperties } from '../../../src/mixins/i18nMixin';
 import { Widget, WidgetProperties } from './../../../src/interfaces';
 import createWidgetBase from '../../../src/createWidgetBase';
 import { w, isHNode, isWNode } from './../../../src/d';
 import bundle from '../../support/nls/greetings';
 
-const createLocalized = createWidgetBase.mixin(createI18nMixin);
+const createLocalized = createWidgetBase.mixin(i18nMixin);
 let localized: Widget<WidgetProperties & I18nProperties> & I18nWidget<any, I18nProperties>;
 
 registerSuite({
-	name: 'mixins/createI18nMixin',
+	name: 'mixins/i18nMixin',
 
 	afterEach() {
 		return switchLocale(systemLocale).then(() => {
@@ -40,6 +40,13 @@ registerSuite({
 				assert.strictEqual(messages.hello, 'Hello');
 				assert.strictEqual(messages.goodbye, 'Goodbye');
 			});
+		},
+
+		'test out API by itself'() {
+			const thinger = createLocalized();
+			thinger.localizeBundle(bundle);
+			const local = thinger.properties.locale;
+			assert.isUndefined(local, 'Should be defined');
 		},
 
 		'Uses `properties.locale` when available'() {

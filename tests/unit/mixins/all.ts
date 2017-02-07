@@ -1,6 +1,6 @@
 import './formLabelMixin';
-import './createI18nMixin';
-import './createProjectorMixin';
+import './i18nMixin';
+import './projectorMixin';
 import './shallowPropertyComparisonMixin';
 import './storeMixin';
 import './themeable';

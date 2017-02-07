@@ -1,11 +1,14 @@
 import global from '@dojo/core/global';
-import compose, { ComposeFactory } from '@dojo/compose/compose';
+import compose from '@dojo/compose/compose';
 import { EventTargettedObject, Handle } from '@dojo/interfaces/core';
 import { VNode } from '@dojo/interfaces/vdom';
 import Promise from '@dojo/shim/Promise';
 import WeakMap from '@dojo/shim/WeakMap';
 import { createProjector as createMaquetteProjector, Projector as MaquetteProjector } from 'maquette';
 import { Widget, WidgetOptions, WidgetProperties } from '../interfaces';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+/* tslint:enable */
 /**
  * Represents the state of the projector
  */
@@ -98,8 +101,6 @@ interface ProjectorData {
 
 export type Projector = Widget<WidgetProperties> & ProjectorMixin;
 
-export interface ProjectorMixinFactory extends ComposeFactory<ProjectorMixin, ProjectorOptions> {}
-
 /**
  * Private state map keyed by instance.
  */
@@ -165,48 +166,49 @@ function attach(instance: Projector, { type }: AttachOptions) {
 	return projectorData.attachPromise;
 }
 
-const createProjectorMixin: ProjectorMixinFactory = compose<ProjectorMixin, ProjectorOptions>({
-	append(this: Projector) {
-		const options = {
-			type: AttachType.Append
-		};
+const projectorMixin = compose.createMixin()
+	.extend({
+		append(this: Projector) {
+			const options = {
+				type: AttachType.Append
+			};
 
-		return attach(this, options);
-	},
-	merge(this: Projector) {
-		const options = {
-			type: AttachType.Merge
-		};
+			return attach(this, options);
+		},
+		merge(this: Projector) {
+			const options = {
+				type: AttachType.Merge
+			};
 
-		return attach(this, options);
-	},
-	replace(this: Projector) {
-		const options = {
-			type: AttachType.Replace
-		};
+			return attach(this, options);
+		},
+		replace(this: Projector) {
+			const options = {
+				type: AttachType.Replace
+			};
 
-		return attach(this, options);
-	},
-	set root(this: Projector, root: Element) {
-		const projectorData = projectorDataMap.get(this);
-		if (projectorData.state === ProjectorState.Attached) {
-			throw new Error('Projector already attached, cannot change root element');
+			return attach(this, options);
+		},
+		set root(this: Projector, root: Element) {
+			const projectorData = projectorDataMap.get(this);
+			if (projectorData.state === ProjectorState.Attached) {
+				throw new Error('Projector already attached, cannot change root element');
+			}
+			projectorData.root = root;
+		},
+		get root(this: Projector): Element {
+			const projectorData = projectorDataMap.get(this);
+			return projectorData && projectorData.root;
+		},
+		get projector(this: Projector): MaquetteProjector {
+			return projectorDataMap.get(this).projector;
+		},
+		get projectorState(this: Projector): ProjectorState {
+			const projectorData = projectorDataMap.get(this);
+			return projectorData && projectorData.state;
 		}
-		projectorData.root = root;
-	},
-	get root(this: Projector): Element {
-		const projectorData = projectorDataMap.get(this);
-		return projectorData && projectorData.root;
-	},
-	get projector(this: Projector): MaquetteProjector {
-		return projectorDataMap.get(this).projector;
-	},
-	get projectorState(this: Projector): ProjectorState {
-		const projectorData = projectorDataMap.get(this);
-		return projectorData && projectorData.state;
-	}
-}).mixin({
-	aspectAdvice: {
+	})
+	.aspect({
 		after: {
 			__render__(this: Projector, result: VNode | string | null) {
 				if (typeof result === 'string' || result === null) {
@@ -220,32 +222,30 @@ const createProjectorMixin: ProjectorMixinFactory = compose<ProjectorMixin, Proj
 				return result;
 			}
 		}
-	}
-}).mixin({
-	initialize(instance: Projector, options: ProjectorOptions = {}) {
-		const { root = document.body, cssTransitions = false } = options;
-		const maquetteProjectorOptions: { transitions?: any } = {};
+	}).init((instance: Projector, options: ProjectorOptions = {}) => {
+			const { root = document.body, cssTransitions = false } = options;
+			const maquetteProjectorOptions: { transitions?: any } = {};
 
-		if (cssTransitions) {
-			if (global.cssTransitions) {
-				maquetteProjectorOptions.transitions = global.cssTransitions;
+			if (cssTransitions) {
+				if (global.cssTransitions) {
+					maquetteProjectorOptions.transitions = global.cssTransitions;
+				}
+				else {
+					throw new Error('Unable to create projector with css transitions enabled. Is the \'css-transition.js\' script loaded in the page?');
+				}
 			}
-			else {
-				throw new Error('Unable to create projector with css transitions enabled. Is the \'css-transition.js\' script loaded in the page?');
-			}
+
+			instance.own(instance.on('widget:children', instance.invalidate));
+			instance.own(instance.on('invalidated', scheduleRender));
+
+			const projector = createMaquetteProjector(maquetteProjectorOptions);
+
+			projectorDataMap.set(instance, {
+				projector,
+				root,
+				state: ProjectorState.Detached
+			});
 		}
+	);
 
-		instance.own(instance.on('widget:children', instance.invalidate));
-		instance.own(instance.on('invalidated', scheduleRender));
-
-		const projector = createMaquetteProjector(maquetteProjectorOptions);
-
-		projectorDataMap.set(instance, {
-			projector,
-			root,
-			state: ProjectorState.Detached
-		});
-	}
-});
-
-export default createProjectorMixin;
+export default projectorMixin;
