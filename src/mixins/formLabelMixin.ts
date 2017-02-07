@@ -1,7 +1,13 @@
-import compose, { ComposeFactory } from '@dojo/compose/compose';
+import compose from '@dojo/compose/compose';
 import { assign } from '@dojo/core/lang';
 import { DNode } from './../interfaces';
 import { v, isHNode } from '../d';
+import createWidget from '../createWidgetBase';
+/* tslint:disable */
+import { ComposeCreatedMixin } from '@dojo/compose/compose';
+import { Evented } from '@dojo/interfaces/bases';
+import { WidgetMixin, WidgetOverloads, WidgetOptions, WidgetProperties } from '../interfaces';
+/* tslint:enable */
 
 /**
  * Label settings for form label text content, position (before or after), and visibility
@@ -99,14 +105,9 @@ export interface FormLabelMixinProperties {
 }
 
 /**
- * Form Label Mixin
- */
-export interface FormLabelMixin {}
-
-/**
  * Form Label
  */
-export type FormLabel = FormLabelMixin & {
+export type FormLabel = {
 	type: string;
 	properties: FormLabelMixinProperties;
 };
@@ -164,53 +165,49 @@ function getFormFieldA11yAttributes(instance: FormLabel) {
 	return nodeAttributes;
 }
 
-/**
- * FormLabalMixinFactory
- */
-export interface FormLabelMixinFactory extends ComposeFactory<FormLabelMixin, {}> {}
+const formLabelMixin = compose.createMixin(createWidget)
+	.extend({ type: '' })
+	.aspect({
+		after: {
+			render(this: FormLabel, result: DNode): DNode {
+				const labelNodeAttributes: any = {};
+				if (isHNode(result)) {
+					assign(result.properties, getFormFieldA11yAttributes(this));
 
-const createFormLabelMixin: FormLabelMixinFactory = compose<FormLabelMixin, {}>({})
-.aspect({
-	after: {
-		render(this: FormLabel, result: DNode): DNode {
-			const labelNodeAttributes: any = {};
-			if (isHNode(result)) {
-				assign(result.properties, getFormFieldA11yAttributes(this));
+					// move classes to label node
+					const { classes } = result.properties;
+					const { formId } = this.properties;
+					assign(labelNodeAttributes, { classes, 'form': formId });
+				}
 
-				// move classes to label node
-				const { classes } = result.properties;
-				const { formId } = this.properties;
-				assign(labelNodeAttributes, { classes, 'form': formId });
+				if (this.properties.label) {
+					const children = [ result ];
+					let label: LabelProperties;
+
+					if (typeof this.properties.label === 'string') {
+						label = assign({}, labelDefaults, { content: this.properties.label });
+					}
+					else {
+						label = assign({}, labelDefaults, this.properties.label);
+					}
+
+					if (label.content.length > 0) {
+						children.push(v('span', {
+							innerHTML: label.content,
+							classes: { 'visually-hidden': label.hidden }
+						}));
+					}
+
+					if (label.position === 'before') {
+						children.reverse();
+					}
+
+					result = v('label', labelNodeAttributes, children);
+				}
+
+				return result;
 			}
-
-			if (this.properties.label) {
-				const children = [ result ];
-				let label: LabelProperties;
-
-				if (typeof this.properties.label === 'string') {
-					label = assign({}, labelDefaults, { content: this.properties.label });
-				}
-				else {
-					label = assign({}, labelDefaults, this.properties.label);
-				}
-
-				if (label.content.length > 0) {
-					children.push(v('span', {
-						innerHTML: label.content,
-						classes: { 'visually-hidden': label.hidden }
-					}));
-				}
-
-				if (label.position === 'before') {
-					children.reverse();
-				}
-
-				result = v('label', labelNodeAttributes, children);
-			}
-
-			return result;
 		}
-	}
-});
+	});
 
-export default createFormLabelMixin;
+export default formLabelMixin;

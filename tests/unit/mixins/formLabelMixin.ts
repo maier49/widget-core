@@ -3,17 +3,12 @@ import * as assert from 'intern/chai!assert';
 import { VNode } from '@dojo/interfaces/vdom';
 import { v, w } from './../../../src/d';
 import createWidgetBase from '../../../src/createWidgetBase';
-import createFormLabelMixin from '../../../src/mixins/createFormLabelMixin';
+import formLabelMixin from '../../../src/mixins/formLabelMixin';
 
-const formLabelWidget = createWidgetBase.mixin(createFormLabelMixin);
+const formLabelWidget = createWidgetBase.mixin(formLabelMixin);
 
 registerSuite({
-	name: 'mixins/createFormLabelMixin',
-	construction() {
-		const formLabelMixin = createFormLabelMixin();
-
-		assert.isDefined(formLabelMixin);
-	},
+	name: 'mixins/formLabelMixin',
 	getFormFieldNodeAttributes: {
 		'for HNode'() {
 			const formField = formLabelWidget({
@@ -81,7 +76,7 @@ registerSuite({
 					return v('input', { classes: this.properties.classes });
 				}
 			});
-			const formField = inputWithClasses.mixin(createFormLabelMixin)({
+			const formField = inputWithClasses.mixin(formLabelMixin)({
 				properties: {
 					label: 'foo',
 					value: 'bar',
@@ -99,7 +94,7 @@ registerSuite({
 		}
 	},
 	'type'() {
-		const formField: any = formLabelWidget();
+		const formField = formLabelWidget();
 		formField.type = 'foo';
 
 		const vnode = <VNode> formField.__render__();

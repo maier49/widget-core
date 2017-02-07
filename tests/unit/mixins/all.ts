@@ -1,4 +1,4 @@
-import './createFormLabelMixin';
+import './formLabelMixin';
 import './createI18nMixin';
 import './createProjectorMixin';
 import './shallowPropertyComparisonMixin';
